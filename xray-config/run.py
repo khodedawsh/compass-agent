@@ -18,9 +18,9 @@ app = Flask(__name__)
 def update_metrics(configs):
     global latest_metrics
 
-    instance_ip = instance_location_info['ip']
-    instance_region = instance_location_info['region']
-    instance_country = instance_location_info['country']
+    instance_ip = instance_location_info["ip"]
+    instance_region = instance_location_info["region"]
+    instance_country = instance_location_info["country"]
 
     metrics = []
     total_count = len(configs.values())
@@ -37,10 +37,10 @@ def update_metrics(configs):
             f'config_host="{config_info["host"]}"',
             f'config_port="{config_info["port"]}"',
             f'config_security="{config_info["security"]}"',
-            f'config_type="{config_info["type"]}"'
+            f'config_type="{config_info["type"]}"',
         ]
-        inline_labels = ','.join(labels)
-        t = f'vpn_config{{{inline_labels}}}'
+        inline_labels = ",".join(labels)
+        t = f"vpn_config{{{inline_labels}}}"
         if value[0] == "passed":
             t += f" {value[3]}"  # delay
         else:
@@ -48,8 +48,10 @@ def update_metrics(configs):
             t += " -1"  # invalid delay
         metrics.append(t)
 
-    latest_metrics = "# HELP vpn_config vpn config up(working) or down(not working).\n" \
-              "# TYPE vpn_config gauge\n" + '\n'.join(metrics) + "\n"
+    latest_metrics = (
+        "# HELP vpn_config vpn config up(working) or down(not working).\n"
+        "# TYPE vpn_config gauge\n" + "\n".join(metrics) + "\n"
+    )
 
     if failed_count == total_count:
         # all failed
@@ -75,8 +77,26 @@ def background_job():
             time.sleep(5)
             continue
         print("start xray testing...", flush=True)
-        exec(["xray-knife", "net", "http", "--thread", "3",  "-d", "30000", "-r",
-              "-e", "-p", "-a", "500", "-f", "configs.csv", "--type", "csv"])
+        exec(
+            [
+                "xray-knife",
+                "net",
+                "http",
+                "--thread",
+                "3",
+                "-d",
+                "30000",
+                "-r",
+                "-e",
+                "-p",
+                "-a",
+                "500",
+                "-f",
+                "configs.csv",
+                "--type",
+                "csv",
+            ]
+        )
         # exec(["cat", "valid.csv"])
         valid_configs = csv_to_dict("valid.csv")
 
@@ -100,7 +120,9 @@ def cert_management_job():
             if config.cf_api_token:
                 time.sleep(86400 * 30)  # every month
                 # try to renew the cert
-                os.system(f'CF_Token={config.cf_api_token} .acme.sh/acme.sh --renew --dns dns_cf -d {config.direct_subdomain}')
+                os.system(
+                    f"CF_Token={config.cf_api_token} .acme.sh/acme.sh --renew --dns dns_cf -d {config.direct_subdomain}"
+                )
 
 
 # Start the background job in a separate thread
@@ -113,23 +135,24 @@ cert_thread = threading.Thread(target=cert_management_job)
 cert_thread.daemon = True
 cert_thread.start()
 
+
 # Define a route for the root URL
-@app.route('/config')
+@app.route("/config")
 def get_xray_config():
     print(config.xray_config)
     return config.xray_config
 
 
-@app.route('/valid-configs')
+@app.route("/valid-configs")
 def valid_configs():
     return valid_configs
 
 
-@app.route('/metrics')
+@app.route("/metrics")
 def metrics():
     return latest_metrics
 
 
 # Run the application if executed directly
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=False)
